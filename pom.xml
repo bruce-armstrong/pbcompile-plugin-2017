@@ -9,9 +9,8 @@
 
     <artifactId>pbcompile</artifactId>
     <packaging>hpi</packaging>
-    <version>1.28-SNAPSHOT</version>
+    <version>0.1</version>
     <name>Jenkins PBCompile Plugin</name>
-    <url>http://wiki.jenkins-ci.org/display/JENKINS/PBCompile+Plugin</url>
     <description>Allows using PBC to build PowerBuilder targets</description>
 
     <licenses>
@@ -44,11 +43,6 @@
         </developer>
     </developers>
 
-    <scm>
-        <connection>scm:git:git://github.com/jenkinsci/pbcompile-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/pbcompile-plugin.git</developerConnection>
-        <tag>pbcompile-1.2017.1</tag>
-    </scm>
 
     <dependencies>
         <dependency>

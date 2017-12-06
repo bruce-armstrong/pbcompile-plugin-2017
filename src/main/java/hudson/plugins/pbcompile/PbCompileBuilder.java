@@ -77,7 +77,7 @@ public class PbCompileBuilder extends Builder {
 	 */
 	@DataBoundConstructor
 	@SuppressWarnings("unused")
-	public PbCompileBuilder(String pbCompileName, String pbCompileFile, String pbtFile, String excludeLiblist, String cmdLineArgs,
+	public PbCompileBuilder(String pbCompileName, String pbtFile, String excludeLiblist, String cmdLineArgs,
 			boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
 		this.pbCompileName = pbCompileName;
 		this.pbtFile = pbtFile;
