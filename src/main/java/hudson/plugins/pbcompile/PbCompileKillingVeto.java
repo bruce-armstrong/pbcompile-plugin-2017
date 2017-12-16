@@ -43,7 +43,7 @@ import org.jenkinsci.Symbol;
  */
 @Extension(optional = true) @Symbol("pbcompileKillingVeto")
 public class PbCompileKillingVeto extends ProcessKillingVeto {
-    private static final VetoCause VETO_CAUSE = new VetoCause("PbCompile Plugin vetoes killing mspdbsrv.exe, see JENKINS-9104 for all the details");
+    private static final VetoCause VETO_CAUSE = new VetoCause("PbCompile Plugin vetoes killing <name of process>");
 
     /**
     * 
@@ -59,7 +59,7 @@ public class PbCompileKillingVeto extends ProcessKillingVeto {
 
         String command = cmdLine.get(0);
         String exeName = FilenameUtils.getName(command);
-        if (exeName.toLowerCase().equals("mspdbsrv.exe")) {
+        if (exeName.toLowerCase().equals("<somefile.exe>")) {
             return VETO_CAUSE;
         }
         return null;

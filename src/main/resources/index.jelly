@@ -1,4 +1,4 @@
 <?jelly escape-by-default='true'?>
 <div>
-    This plugin makes it possible to build a PowerBuilder target (.pbt).
+    This plugin makes it possible to build a PowerBuilder target (.pbt) using the PowerBuilder Autocompile utility
 </div>

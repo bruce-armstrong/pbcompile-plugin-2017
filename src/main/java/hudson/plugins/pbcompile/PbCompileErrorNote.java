@@ -12,14 +12,19 @@ import java.util.regex.Pattern;
 /**
  * Annotation for PBC and CSC error messages
  */
+@SuppressWarnings("rawtypes")
 public class PbCompileErrorNote extends ConsoleNote {
-    /** Pattern to identify error messages */
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -3278523238642788774L;
+	/** Pattern to identify error messages */
     public final static Pattern PATTERN = Pattern.compile("(.*)[Ee]rror\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");
     
     public PbCompileErrorNote() {
     }
 
-    @Override
+	@Override
     public ConsoleAnnotator annotate(Object context, MarkupText text, int charPos) {
         text.addMarkup(0, text.length(), "<span class=error-inline>", "</span>");
         return null;

@@ -43,7 +43,11 @@ import java.io.IOException;
  */
 public final class PbCompileInstallation extends ToolInstallation implements NodeSpecific<PbCompileInstallation>, EnvironmentSpecific<PbCompileInstallation> {
 
-    private final String defaultArgs;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -9032399700618715657L;
+	private final String defaultArgs;
 
     @DataBoundConstructor
     public PbCompileInstallation(String name, String home, String defaultArgs) {

@@ -31,18 +31,8 @@ THE SOFTWARE.
             </j:forEach>
         </select>
     </f:entry>
-    <f:entry title="${%PBT File}" field="pbtFile">
-        <f:textbox name="pbCompileBuilder.pbtFile" value="${instance.pbtFile}"/>
-    </f:entry>
-    <f:entry title="${%Exclude Liblist}" field="excludeLiblist">
-        <f:textbox name="pbCompileBuilder.excludeLiblist" value="${instance.excludeLiblist}"/>
-    </f:entry>
     <f:entry title="${%PBC Command Line Arguments}" field="cmdLineArgs">
         <f:textarea name="pbCompileBuilder.cmdLineArgs" value="${instance.cmdLineArgs}"/>
-    </f:entry>
-    <f:entry title="${%Pass build variables as properties}" field="buildVariablesAsProperties">
-        <f:checkbox name="pbCompileBuilder.buildVariablesAsProperties" value="${instance.buildVariablesAsProperties}"
-                    checked="${instance.buildVariablesAsProperties}" default="false" enabled="false"/>
     </f:entry>
     <f:advanced>
         <f:entry title="${%Continue Job on build Failure}" field="continueOnBuildFailure">

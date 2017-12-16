@@ -23,23 +23,30 @@
  */
 package hudson.plugins.pbcompile;
 
-import hudson.*;
-import hudson.model.*;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+
+import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.DataBoundConstructor;
+
+import hudson.CopyOnWrite;
+import hudson.EnvVars;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.Util;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.model.Computer;
+import hudson.model.Descriptor;
+import hudson.model.Node;
+import hudson.model.Result;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.tools.ToolInstallation;
 import hudson.util.ArgumentListBuilder;
-import org.jenkinsci.Symbol;
-import org.kohsuke.stapler.DataBoundConstructor;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
-import java.nio.charset.Charset;
 
 /**
  * @author kyle.sweeney@valtech.com
@@ -49,10 +56,7 @@ public class PbCompileBuilder extends Builder {
 	 * GUI fields
 	 */
 	private final String pbCompileName;
-	private final String pbtFile;
-	private final String excludeLiblist;
 	private final String cmdLineArgs;
-	private final boolean buildVariablesAsProperties;
 	private final boolean continueOnBuildFailure;
 	private final boolean unstableIfWarnings;
 
@@ -62,63 +66,33 @@ public class PbCompileBuilder extends Builder {
 	 *
 	 * @param pbCompileName
 	 *            The PowerBuilder logical name
-	 * @param pbtFile
-	 *            The name/location of the PBT file for the project
-	 * @param excludeLiblist
-	 *            The name/location of any libraries in the PBT that should be excluded from the import (i.e., PBD files)
 	 * @param cmdLineArgs
 	 *            Whitespace separated list of command line arguments for PBC
-	 * @param buildVariablesAsProperties
-	 *            If true, pass build variables as properties to PBC (not currently supported by PBC)
 	 * @param continueOnBuildFailure
 	 *            If true, job will continue despite PBC build failure
 	 * @param unstableIfWarnings
 	 *            If true, job will be unstable if there are warnings
 	 */
 	@DataBoundConstructor
-	@SuppressWarnings("unused")
-	public PbCompileBuilder(String pbCompileName, String pbtFile, String excludeLiblist, String cmdLineArgs,
-			boolean buildVariablesAsProperties, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
+	public PbCompileBuilder(String pbCompileName, String cmdLineArgs, boolean continueOnBuildFailure, boolean unstableIfWarnings) {
 		this.pbCompileName = pbCompileName;
-		this.pbtFile = pbtFile;
-		this.excludeLiblist = excludeLiblist ;
 		this.cmdLineArgs = cmdLineArgs;
-		this.buildVariablesAsProperties = buildVariablesAsProperties;
 		this.continueOnBuildFailure = continueOnBuildFailure;
 		this.unstableIfWarnings = unstableIfWarnings;
 	}
 
-	@SuppressWarnings("unused")
-	public String getExcludeLiblist() {
-		return excludeLiblist;
-	}
-
-	@SuppressWarnings("unused")
-	public String getPbtFile() {
-		return pbtFile;
-	}
-
-	@SuppressWarnings("unused")
 	public String getPbCompileName() {
 		return pbCompileName;
 	}
 
-	@SuppressWarnings("unused")
 	public String getCmdLineArgs() {
 		return cmdLineArgs;
 	}
 
-	@SuppressWarnings("unused")
-	public boolean getBuildVariablesAsProperties() {
-		return buildVariablesAsProperties;
-	}
-
-	@SuppressWarnings("unused")
 	public boolean getContinueOnBuildFailure() {
 		return continueOnBuildFailure;
 	}
 
-	@SuppressWarnings("unused")
 	public boolean getUnstableIfWarnings() {
 		return unstableIfWarnings;
 	}
@@ -136,111 +110,7 @@ public class PbCompileBuilder extends Builder {
 	@Override
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
 			throws InterruptedException, IOException {
-		if (runOrcaScript(build, launcher, listener)) {
 			return runPBC(build, launcher, listener);
-		} else {
-			return false;
-		}
-	}
-
-	public boolean runOrcaScript(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
-			throws InterruptedException, IOException {
-		ArgumentListBuilder args = new ArgumentListBuilder();
-		String execName = "orcascr170.exe";
-		PbCompileInstallation ai = getPbCompile();
-
-		if (ai == null) {
-			listener.getLogger().println("Path To orcascr170.exe: " + execName);
-			args.add(execName);
-		} else {
-			EnvVars env = build.getEnvironment(listener);
-			Node node = Computer.currentComputer().getNode();
-			if (node != null) {
-				ai = ai.forNode(node, listener);
-				ai = ai.forEnvironment(env);
-				String pathToPbCompile = getToolFullPath(launcher, ai.getHome(), execName);
-				FilePath exec = new FilePath(launcher.getChannel(), pathToPbCompile);
-
-				try {
-					if (!exec.exists()) {
-						listener.fatalError(pathToPbCompile + " doesn't exist");
-						return false;
-					}
-				} catch (IOException e) {
-					listener.fatalError("Failed checking for existence of " + pathToPbCompile);
-					return false;
-				}
-
-				listener.getLogger().println("Path To orcascr170.exe: " + pathToPbCompile);
-				args.add(pathToPbCompile);
-
-				if (ai.getDefaultArgs() != null) {
-					args.add(tokenizeArgs(ai.getDefaultArgs()));
-				}
-			}
-		}
-
-		EnvVars env = build.getEnvironment(listener);
-		FilePath pwd = build.getModuleRoot();
-
-		PrintWriter pw = null;
-		String orcascript = build.getWorkspace() + "\\orcascript.orca";
-		try {
-			File file = new File(orcascript);
-			FileWriter fw = new FileWriter(file, false);
-			pw = new PrintWriter(fw);
-			pw.println("start session");
-			//pw.println("set debug true");
-			//pw.println("scc set connect property logfile \"createpbls.log\"");
-			pw.println("scc connect offline");
-			pw.println("scc set target \"" + pbtFile + "\" importonly");
-			if ( excludeLiblist != null && !excludeLiblist.isEmpty() )
-			{
-				pw.println("scc exclude liblist \"" + excludeLiblist + "\"");				
-			}
-			pw.println("scc refresh target 3pass");
-			pw.println("scc close");
-			pw.println("end session");
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (pw != null) {
-				pw.close();
-			}
-		}
-
-		args.add(orcascript);
-
-		if (!launcher.isUnix()) {
-			final int cpi = getCodePageIdentifier(build.getCharset());
-			if (cpi != 0)
-				args.prepend("cmd.exe", "/C", "\"", "chcp", String.valueOf(cpi), "&&");
-			else
-				args.prepend("cmd.exe", "/C", "\"");
-			args.add("\"", "&&", "exit", "%%ERRORLEVEL%%");
-		}
-
-		try {
-			listener.getLogger()
-					.println(String.format("Executing the command %s from %s", args.toStringWithQuote(), pwd));
-			// Parser to find the number of Warnings/Errors
-			PbCompileConsoleParser mbcp = new PbCompileConsoleParser(listener.getLogger(), build.getCharset());
-			PbCompilerConsoleAnnotator annotator = new PbCompilerConsoleAnnotator(listener.getLogger(),
-					build.getCharset());
-			// Launch the pbc170.exe
-			int r = launcher.launch().cmds(args).envs(env).stdout(mbcp).stdout(annotator).pwd(pwd).join();
-			// Check the number of warnings
-			if (unstableIfWarnings && mbcp.getNumberOfWarnings() > 0) {
-				listener.getLogger().println("> Set build UNSTABLE because there are warnings.");
-				build.setResult(Result.UNSTABLE);
-			}
-			// Return the result of the compilation
-			return continueOnBuildFailure ? true : (r == 0);
-		} catch (IOException e) {
-			Util.displayIOException(e, listener);
-			build.setResult(Result.FAILURE);
-			return false;
-		}
 	}
 
 	public boolean runPBC(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
@@ -288,18 +158,6 @@ public class PbCompileBuilder extends Builder {
 		if (normalizedArgs.trim().length() > 0)
 			args.add(tokenizeArgs(normalizedArgs));
 
-		// Build /P:key1=value1;key2=value2 ...
-		Map<String, String> propertiesVariables = getPropertiesVariables(build);
-		if (buildVariablesAsProperties && !propertiesVariables.isEmpty()) {
-			StringBuffer parameters = new StringBuffer();
-			parameters.append("/p:");
-			for (Map.Entry<String, String> entry : propertiesVariables.entrySet()) {
-				parameters.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
-			}
-			parameters.delete(parameters.length() - 1, parameters.length());
-			args.add(parameters.toString());
-		}
-
 		FilePath pwd = build.getModuleRoot();
 
 		if (!launcher.isUnix()) {
@@ -334,40 +192,21 @@ public class PbCompileBuilder extends Builder {
 		}
 	}
 
-	private Map<String, String> getPropertiesVariables(AbstractBuild build) {
-
-		Map<String, String> buildVariables = build.getBuildVariables();
-
-		final Set<String> sensitiveBuildVariables = build.getSensitiveBuildVariables();
-		if (sensitiveBuildVariables == null || sensitiveBuildVariables.isEmpty()) {
-			return buildVariables;
-		}
-
-		for (String sensitiveBuildVariable : sensitiveBuildVariables) {
-			buildVariables.remove(sensitiveBuildVariable);
-		}
-
-		return buildVariables;
-	}
-
 	/**
 	 * Get the full path of the tool to run. If given path is a directory, this
 	 * will append the executable name.
 	 */
 	static String getToolFullPath(Launcher launcher, String pathToTool, String execName)
 			throws IOException, InterruptedException {
-		String fullPathToPbCompile = pathToTool;
-
-		FilePath exec = new FilePath(launcher.getChannel(), fullPathToPbCompile);
+		String fullPath = pathToTool;
+		FilePath exec = new FilePath(launcher.getChannel(), fullPath);
 		if (exec.isDirectory()) {
-			if (!fullPathToPbCompile.endsWith("\\")) {
-				fullPathToPbCompile = fullPathToPbCompile + "\\";
+			if (!fullPath.endsWith("\\")) {
+				fullPath = fullPath + "\\";
 			}
-
-			fullPathToPbCompile = fullPathToPbCompile + execName;
+			fullPath = fullPath + execName;
 		}
-
-		return fullPathToPbCompile;
+		return fullPath;
 	}
 
 	@Override
@@ -412,6 +251,7 @@ public class PbCompileBuilder extends Builder {
 			return Messages.PbCompileBuilder_DisplayName();
 		}
 
+		@SuppressWarnings("rawtypes")
 		@Override
 		public boolean isApplicable(Class<? extends AbstractProject> jobType) {
 			return true;

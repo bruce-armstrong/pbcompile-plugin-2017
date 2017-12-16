@@ -12,14 +12,19 @@ import java.util.regex.Pattern;
 /**
  * Annotation for PbCmopile warning messages
  */
+@SuppressWarnings("rawtypes")
 public class PbCompileWarningNote extends ConsoleNote {
-    /** Pattern to identify warning messages */
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 5058082724408336863L;
+	/** Pattern to identify warning messages */
     public final static Pattern PATTERN = Pattern.compile("(.*)\\(\\d+(,\\d+){0,1}\\):\\s[Ww]arning\\s(([A-Z]*)\\d+){0,1}:\\s(.*)");
     
     public PbCompileWarningNote() {
     }
 
-    @Override
+	@Override
     public ConsoleAnnotator annotate(Object context, MarkupText text, int charPos) {
         text.addMarkup(0, text.length(), "<span class=warning-inline>", "</span>");
         return null;
